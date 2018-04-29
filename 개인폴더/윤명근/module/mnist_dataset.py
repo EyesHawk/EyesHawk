@@ -3,9 +3,8 @@ import os
 # import panda as pd
 
 
-def get_mnist_datasets():
-    cur_dir = os.path.dirname(__file__)
-    mnist_path = mnist.get_file(fname=cur_dir+"\\..\\resource\\mnist.datasets"
+def get_mnist_datasets(res_dir):
+    mnist_path = mnist.get_file(fname=res_dir
                                 , origin='https://s3.amazonaws.com/img-datasets/mnist.npz'
                                 , file_hash='8a61469f7ea1b51cbae51d4f78837e45'
                                 )
