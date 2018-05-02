@@ -6,34 +6,36 @@
 # - 서적 [모두의 딥러닝 - 조태호] 참고함
 # - model 저장을 위해 h5py 모듈 install 해야 함.
 #
-# import sys
-# sys.path.insert(0, '../')
-import tensorflow as tf
-import module.mnist_dataset as md
-import matplotlib.pyplot as plot
-# import panda as pd
-import os
-import numpy
 
-from keras import Sequential, Model, Input, backend
-from keras.models import load_model
-from keras.layers.core import Dense, Reshape
-from keras.layers.convolutional import Conv2D, UpSampling2D
-from keras.activations import relu, softplus
-from keras.layers.advanced_activations import LeakyReLU, PReLU, ThresholdedReLU, Softmax
-from keras.optimizers import Adam
-from keras.losses import binary_crossentropy, categorical_crossentropy, mean_squared_error, \
-    mean_squared_logarithmic_error
-from keras.callbacks import EarlyStopping, TensorBoard, ModelCheckpoint
-from keras.utils import np_utils
 
 if __name__ == "__main__":
+    import os
+    cur_dir = os.path.dirname(__file__)
+    import sys
+    sys.path.insert(0, cur_dir+'/../')
+    import tensorflow as tf
+    import module.mnist_dataset as md
+    import matplotlib.pyplot as plot
+    import numpy
+    # import panda as pd
+    from keras import Sequential, Model, Input, backend
+    from keras.models import load_model
+    from keras.layers.core import Dense, Reshape
+    from keras.layers.convolutional import Conv2D, UpSampling2D
+    from keras.activations import relu, softplus
+    from keras.layers.advanced_activations import LeakyReLU, PReLU, ThresholdedReLU, Softmax
+    from keras.optimizers import Adam
+    from keras.losses import binary_crossentropy, categorical_crossentropy, mean_squared_error, \
+        mean_squared_logarithmic_error
+    from keras.callbacks import EarlyStopping, TensorBoard, ModelCheckpoint
+    from keras.utils import np_utils
+
     BATCH_SIZE = 100
     NUM_OF_CLASSES = 10
     EPOCHS = 10
-    LOAD_HDF5_FILE = 'resource/mnist_model/04-0.0719.hdf5'
+    LOAD_HDF5_FILE = cur_dir+'/resource/mnist_model/04-0.0636.hdf5'
 
-    mnist_datasets = md.get_mnist_datasets("resource/mnist.datasets")
+    mnist_datasets = md.get_mnist_datasets(cur_dir+"/resource/mnist.datasets")
     x_train = mnist_datasets[0][0]
     y_train = mnist_datasets[0][1]
     x_test = mnist_datasets[1][0]

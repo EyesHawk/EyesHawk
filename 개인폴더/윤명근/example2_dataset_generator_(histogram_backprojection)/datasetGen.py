@@ -1,10 +1,7 @@
-# import os
-# import sys
-# sys.path.insert(os.path.dirname(__file__)+"../")
+﻿import os
+import sys
 from cv2 import *
 import numpy as np
-from PyQt5.QtWidgets import QWidget, QPushButton, QLineEdit, QInputDialog, QApplication
-
 
 # dataset generate
 #   20180429-210400 폴더 안에
@@ -51,6 +48,11 @@ def hsv_quantize_img(hsv_img, quantize_level = 64):
 
 
 if __name__ == "__main__":
+    cur_dir = os.path.dirname(__file__)
+    # sys.path.insert(cur_dir + "/../")
+    from PyQt5.QtWidgets import QWidget, QPushButton, QLineEdit, QInputDialog, QApplication
+
+
     trustGroupCount = histogramBackProjection('./trustGroup/')
     expFileGroup = os.listdir('./experimentalGroup/')
     print('generate dataset with %d experimentalGroup, %d trustGroup, trustGroup Size is (?,?)'
