@@ -1,20 +1,40 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
+
 
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
+        
         self.setWindowTitle("호크아이")
-        self.setGeometry(300, 300, 500, 300) # 위치 가로 세로
+        self.setGeometry(300, 300, 1200, 500) # 위치 가로 세로
         
-        btn1 = QPushButton("btn1", self)    # 버튼 정의
-        btn1.move(230, 20)
-        btn1.clicked.connect(self.btn1_clicked) 
+        btn_next = QPushButton("다음", self)    # 버튼 정의
+        btn_next.move(630, 200)
+        btn_next.clicked.connect(self.image_load_next) 
         
+        btn_previous = QPushButton("이전", self)    # 버튼 정의
+        btn_previous.move(30, 200)
+        btn_previous.clicked.connect(self.image_load_previous) 
 
+        btn_x = QPushButton("X", self)    # 버튼 정의
+        btn_x.move(120, 450)
+        btn_x.clicked.connect(self.btn_x)
+
+        btn_refresh = QPushButton("refresh", self)    # 버튼 정의
+        btn_refresh.move(320, 450)
+        btn_refresh.clicked.connect(self.btn_refresh)
+
+        btn_o = QPushButton("O", self)    # 버튼 정의
+        btn_o.move(520, 450)
+        btn_o.clicked.connect(self.btn_o) 
+
+        btn_o = QPushButton("저장", self)    # 버튼 정의
+        btn_o.move(900, 450)
+        btn_o.clicked.connect(self.btn_save) 
+        
         openFile = QAction(QIcon('open.png'), 'Open', self)
         openFile.setShortcut('Ctrl+O')
         openFile.setStatusTip('Open new File')
@@ -23,26 +43,44 @@ class MyWindow(QMainWindow):
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(openFile)
-        
-        btn = QPushButton('Dialog', self)
-        btn.move(20, 20)
-        btn.clicked.connect(self.showDialog)
-        
-        self.le = QLineEdit(self)
-        self.le.move(130, 22)
-
-
-        layout = QHBoxLayout()
-        layout.addWidget(btn1)
-        layout.addWidget(btn)
-
-        self.setLayout(layout)
+                
         self.statusBar()
+        self.label = QLabel(self)
+        self.textedit = QTextEdit(self)
+        self.textedit.move(830, 80)
+        self.textedit.resize(300, 300)
+
+    def image_load_next(self):
+
+        pixmap = QPixmap('test0.png')   #파일 이름 넣으면 됨 단 같은 경로만
+        self.label.setPixmap(pixmap)
+        self.label.resize(pixmap.width(),pixmap.height())
+        self.label.move(300, 200)
+
+    def image_load_previous(self):
+
+        pixmap = QPixmap('test1.png')        #파일 이름 넣으면 됨 단 같은 경로만
+        self.label.setPixmap(pixmap)
+        self.label.resize(pixmap.width(),pixmap.height())
+        self.label.move(300, 200)
+
+    def btn_o(self):
+        self.textedit.setText("입력 text")
+
+    def btn_x(self):
+        print(self.textedit.toPlainText())
+
+    def btn_refresh(self):
+        self.textedit.setText("")
+
+    def btn_save(self):
+        f = open("test.txt", 'w')
+        f.write(self.textedit.toPlainText())
         
     def openfile(self):
 
         fname = QFileDialog.getOpenFileName(self, 'Open file', '/home')
-
+        
        ## if fname[0]:
          ##   f = open(fname[0], 'r')
 
@@ -71,18 +109,6 @@ class MyWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
-
-    def contextMenuEvent(self, event):
-       
-        cmenu = QMenu(self)
-           
-        newAct = cmenu.addAction("New")
-        opnAct = cmenu.addAction("Open")
-        quitAct = cmenu.addAction("Quit")
-        action = cmenu.exec_(self.mapToGlobal(event.pos()))
-           
-        if action == quitAct:
-            qApp.quit() 
 
     
 if __name__ == "__main__":
