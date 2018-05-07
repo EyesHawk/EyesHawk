@@ -17,10 +17,9 @@ import numpy as np
 #       임의 지정해서 데이터 만들기? (rect만 해주면 되니깐)
 #       신뢰도 설정? (신뢰도 넘어가버리는 애들에 대해서 다시 검증)
 #
-def multipleHistogramBackProjection(dir_name):
+def multipleHistogramBackProjection(dir_name, quantize_level=64):
     read_file_count = 0
     file_list = os.listdir(dir_name)
-    quantize_level = 64
     ret = [[0] * quantize_level] * quantize_level  # np.ndarray 로 해야 += 연산자 제대로 될 듯
     for file in file_list:
         if file.endswith('png') | file.endswith('jpg'):
@@ -29,7 +28,7 @@ def multipleHistogramBackProjection(dir_name):
             if len(np.shape(img)) != 3:
                 continue
             hsv_img = cvtColor(img, COLOR_BGR2HSV)
-            ret += quantizedHsHistogram(hsv_img)  # 문제있는 부분
+            ret += quantizedHsHistogram(hsv_img, quantize_level)  # 문제있는 부분
             read_file_count += 1
         # if file.endswith('avi') | file.endswith('mp4'):
         #     cap = VideoCapture(file)
@@ -51,8 +50,8 @@ def quantizedHsHistogram(hsv_img, quantize_level=64):
     splitHSV = split(hsv_img)  # split 함수
     for y in hsv_img.rows:
         for x in hsv_img.cols:
-            qH = quantize(splitHSV.at(y, x)[0])
-            qS = quantize(splitHSV.at(y, x)[1])
+            qH = quantize(splitHSV.at(y, x)[0], quantize_level)
+            qS = quantize(splitHSV.at(y, x)[1], quantize_level)
             # qV = quantize(splitHSV.at(y, x)[2])
             ret[qH][qS] += 1
     ret /= (hsv_img.rows * hsv_img.cols)
@@ -68,41 +67,43 @@ if __name__ == "__main__":
     # sys.path.insert(cur_dir + "/../")
     from PyQt5.QtWidgets import QWidget, QPushButton, QLineEdit, QInputDialog, QApplication
 
-
-    quantize_level = 64
+    quantizeLevel = 64
     hist_trustability = 0.2  # 1이 최대, 신뢰도 threshold.
     squareAreaSize = 10
     squareAreaShiftSize = int(squareAreaSize / 2)
     squareAreaThreshold = 0.5
     # 픽셀의 히스토그램 신뢰도가 0.2차이가 나는 애들이 50% 일 때 해당 square를 검출함.
-    # square 는 areaSize 의 반씩 시프트함.
+    # square 는 squareAreaShiftSize(areaSize 의 반)씩 시프트함.
 
-
-    hs_histogram, trustGroupCount = multipleHistogramBackProjection('./trustGroup/', quantize_level)
-    experimentalGroup = os.listdir('./experimentalGroup/')
+    trust_dir_name = cur_dir + '/trustGroup/'
+    exp_dir_name = cur_dir + '/experimentalGroup/'
+    hs_histogram, trustGroupCount = multipleHistogramBackProjection(trust_dir_name, quantizeLevel)
+    experimentalGroup = os.listdir(exp_dir_name)
     print('generate dataset with %d experimentalGroup, %d trustGroup, trustGroup Size is (?,?)'
           % (len(experimentalGroup), trustGroupCount))
 
-
     for file in experimentalGroup:
-        img = experimentalGroup[file]
-        padding = int(squareAreaSize / 2)
-        for y in range(padding, img.rows-padding, squareAreaShiftSize):
-            for x in range(padding, img.cols-padding, squareAreaShiftSize):
-                hs_val = img.at(y,x)
-                hQ_val = quantize(hs_val['h'], quantize_level)
-                sQ_val = quantize(hs_val['s'], quantize_level)
-                c = 0
-                for yy in range(y-squareAreaSize, y+squareAreaSize):
-                    for xx in range(x - squareAreaSize, x + squareAreaSize):
-                        if hist_trustability <= hs_histogram[hQ_val][sQ_val]:
-                            c += 1
-                areaTrustability = c / (squareAreaSize**2)
-                if squareAreaThreshold <= areaTrustability:
-                    print(y & "," & x & " : value("&areaTrustability&")")
-                    # y-squareAreaSize ~ y+squareAreaSize-1
-                    # x-squareAreaSize ~ x+squareAreaSize-1
-                    # rects are detected back projection area
+        if file.endswith('png') | file.endswith('jpg'):
+            file_path = exp_dir_name + file
+            img = imread(file_path, IMREAD_COLOR)
+
+            padding = int(squareAreaSize / 2)
+            for y in range(padding, img.rows - padding, squareAreaShiftSize):
+                for x in range(padding, img.cols - padding, squareAreaShiftSize):
+                    hs_val = img.at(y, x)
+                    hQ_val = quantize(hs_val['h'], quantizeLevel)
+                    sQ_val = quantize(hs_val['s'], quantizeLevel)
+                    c = 0
+                    for yy in range(y - squareAreaSize, y + squareAreaSize):
+                        for xx in range(x - squareAreaSize, x + squareAreaSize):
+                            if hist_trustability <= hs_histogram[hQ_val][sQ_val]:
+                                c += 1
+                    areaTrustability = c / (squareAreaSize ** 2)
+                    if squareAreaThreshold <= areaTrustability:
+                        print(y & "," & x & " : value(" & areaTrustability & ")")
+                        # y-squareAreaSize ~ y+squareAreaSize-1
+                        # x-squareAreaSize ~ x+squareAreaSize-1
+                        # rects are detected back projection area
 
     # app = QApplication([])
     # dialog = QInputDialog()
