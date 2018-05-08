@@ -135,6 +135,7 @@ class Interaction:
 
     def __set_detection_order__(self):
         if len(self.__detection_list__) == 0:
+            self.__rect_drawn_image__ = self.__current_image__.copy()
             return
         if len(self.__detection_list__) <= self.__detection_order__:
             last_idx = self.__detection_order__ - 1
