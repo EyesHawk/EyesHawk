@@ -92,19 +92,32 @@ class ImageProcessing:
         padding = int(square_area_size / 2)
         rows = img.shape[0]
         cols = img.shape[1]
-        for y in range(padding, rows - padding, square_area_shift_size):
-            for x in range(padding, cols - padding, square_area_shift_size):
+        arr = [[0, 0] * rows for i in range(cols)]
+        for y in range(rows):
+            for x in range(cols):
                 hsv_pixel = img[y, x]
                 hQ_val = ImageProcessing.quantize(hsv_pixel[0], quantize_level)
                 sQ_val = ImageProcessing.quantize(hsv_pixel[1], quantize_level)
-                c = 0
-                for yy in range(y - square_area_size, y + square_area_size):
-                    for xx in range(x - square_area_size, x + square_area_size):
-                        if hist_trustability <= hist[hQ_val, sQ_val]:
-                            c += 1
-                areaTrustability = c / (square_area_size ** 2)
+                if hist_trustability <= hist[hQ_val, sQ_val]:
+                    arr[y][x] = 1
+                else:
+                    arr[y][x] = 0
+        for y in range(rows):
+            s = 0
+            for x in range(cols):
+                v = arr[y][x]
+                if y > 0:
+                    arr[y][x] += arr[y - 1][x]
+                arr[y][x] += s
+                s += v
+        for y in range(padding, rows - padding, square_area_shift_size):
+            for x in range(padding, cols - padding, square_area_shift_size):
+                s = arr[y][x] - arr[y - square_area_shift_size - 1][x] - arr[y][x - square_area_shift_size - 1] + \
+                    arr[y - square_area_shift_size - 1][x - square_area_shift_size - 1]
+                areaTrustability = s / (square_area_size ** 2)
                 if square_area_threshold <= areaTrustability:
-                    detection_list.append((x-square_area_size, y-square_area_size, x+square_area_size-1, y+square_area_size-1))
+                    detection_list.append((x - square_area_size, y - square_area_size, x + square_area_size - 1,
+                                           y + square_area_size - 1))
                     print(str(y) + "," + str(x) + " : value(" + str(areaTrustability) + ")")
         return detection_list
 
