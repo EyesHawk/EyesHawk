@@ -9,7 +9,7 @@ import numpy as np
 import cv2 as cv
 from ..module.image_processing import Tester
 
-save_num = 1064
+save_num = 1091
 
 
 class Interaction:
@@ -188,6 +188,9 @@ class Interaction:
                 if dst_size < shape[1]:
                     shape[0] = int(shape[0] / shape[1] * dst_size)
                     shape[1] = dst_size
+                temp = shape[1]
+                shape[1] = shape[0]
+                shape[0] = temp
                 self.__current_image__ = cv.resize(self.__current_image__, tuple(shape[0:2]))
                 self.__detection_list__ = ip.detect_from_hs_hist(self.__hist__,
                                                                  self.__current_image__,
