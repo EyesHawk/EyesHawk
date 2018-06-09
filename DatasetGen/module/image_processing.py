@@ -1,20 +1,46 @@
 from PyQt5.QtGui import QImage, QPixmap
 from cv2 import *
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+
+class Tester:
+    debug_mode = False
+
+    @staticmethod
+    def print(text: str):
+        if not Tester.debug_mode:
+            return
+        print(text)
+
+    @staticmethod
+    def show_histogram_3d(hist: np):
+        if not Tester.debug_mode:
+            return
+        fig = plt.figure(1)
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot([0, hist.shape[0]], [0, hist.shape[1]], 'r')
+        for r in range(0, hist.shape[0]):
+            for c in range(0, hist.shape[1]):
+                if 0.1 < hist[r, c]:
+                    ax.plot([r, r], [c, c], [0, hist[r, c]], 'b')
+        plt.show()
 
 
 class ImageProcessing:
     @staticmethod
     # 기본적으로 메모리가 공유되니 필요시 깊은 복사를 사용해야 함.
-    def pixmap_to_ndarray(qPixmap: QPixmap) -> np.ndarray:
-        bits = qPixmap.toImage().bits()
-        height = qPixmap.height()
-        width = qPixmap.width()
+    def pixmap_to_ndarray(q_pixmap: QPixmap) -> np.ndarray:
+        bits = q_pixmap.toImage().bits()
+        height = q_pixmap.height()
+        width = q_pixmap.width()
         channel = 3
-        if qPixmap.hasAlphaChannel():
+        if q_pixmap.hasAlphaChannel():
             channel += 1
         bits.setsize(height * width * channel)
         ndarray = np.ndarray(shape=(height, width, channel), buffer=bits, dtype=np.uint8)
+        ndarray = cvtColor(ndarray, COLOR_RGB2BGR)
         return ndarray
 
     @staticmethod
@@ -28,8 +54,7 @@ class ImageProcessing:
         return pixmap
 
     @staticmethod
-    def multipleHistogramBackProjection(trust_dir_name, quantize_level=64) -> (np.ndarray, int):
-        # todo : 여기서부터 quantize 모두 nparray 써야함.
+    def multiple_histogram_back_projection(trust_dir_name, quantize_level=64) -> (np.ndarray, int):
         read_file_count = 0
         file_list = os.listdir(trust_dir_name)
         ret = np.array([[0] * quantize_level] * quantize_level, dtype=np.float64)
@@ -40,9 +65,9 @@ class ImageProcessing:
                 if len(np.shape(img)) != 3:
                     continue
                 hsv_img = cvtColor(img, COLOR_BGR2HSV)
-                ret += ImageProcessing.quantizedHsHistogram(hsv_img, quantize_level)
+                ret += ImageProcessing.quantized_hs_histogram(hsv_img, quantize_level)
                 read_file_count += 1
-                print(file+' : back projection 완료')
+                Tester.print(file + ' : back projection 완료')
             # ------
             # video
             #
@@ -55,11 +80,25 @@ class ImageProcessing:
             #         read_file_count += 1
             #         can_readable, frame = cap.read()
             # ------
-        ret /= read_file_count
+
+        ret = GaussianBlur(ret, (9, 9), 0)
+        _, max_val, _, _ = minMaxLoc(ret)
+        ret /= max_val
+
+        # -----
+        # otsu
+        #
+        # hist *= 255.0 / max_val
+        # hist = np.uint8(hist)
+        # _, hist = threshold(hist, 0, 1, THRESH_BINARY | THRESH_OTSU)
+        # hist = np.float64(hist)
+        # -----
+
+        Tester.show_histogram_3d(ret)
         return ret, read_file_count
 
     @staticmethod
-    def quantizedHsHistogram(hsv_img: np.ndarray, quantize_level=64) -> np.ndarray:
+    def quantized_hs_histogram(hsv_img: np.ndarray, quantize_level=64) -> np.ndarray:
         # https://docs.opencv.org/3.3.1/dc/df6/tutorial_py_histogram_backprojection.html
         hist = np.array([[0] * quantize_level] * quantize_level, dtype=np.float64)
         rows = hsv_img.shape[0]
@@ -67,55 +106,61 @@ class ImageProcessing:
         for y in range(0, rows):
             for x in range(0, cols):
                 pixel = hsv_img[y, x]
-                qH = ImageProcessing.quantize(pixel[0], quantize_level)
-                qS = ImageProcessing.quantize(pixel[1], quantize_level)
-                hist[qH, qS] += 1
-        hist /= (rows * cols)
+                q_h = ImageProcessing.quantize(pixel[0], quantize_level, 180)
+                q_s = ImageProcessing.quantize(pixel[1], quantize_level, 255)
+                hist[q_h, q_s] += 1
+
         return hist
 
     @staticmethod
-    def quantize(value, quantize_level=64) -> int:
-        return int(round(value / 255.0 * (quantize_level - 1)))
+    def quantize(value, quantize_level, origin_level) -> int:
+        return int(round(value / origin_level * (quantize_level - 1)))
 
-    # trustability = 1이 최대
+    # trust ability = 1이 최대
     # 픽셀의 히스토그램 신뢰도가 0.2차이가 나는 애들이 50% 일 때 해당 square를 검출함.
     # square 는 squareAreaShiftSize(areaSize 의 반)씩 시프트함.
     # return : 4개의 값을 가진 튜플의 리스트를 반환.
     @staticmethod
-    def detect_from_hs_hist(hist: np.ndarray, img: np.ndarray,
-                            quantize_level=64, hist_trustability=0.2, square_area_size=10,
-                            square_area_shift_size=5, square_area_threshold=0.5) -> list:
+    def detect_from_hs_hist(hist: np.ndarray,
+                            img: np.ndarray,
+                            threshold_hist_percent,
+                            threshold_area_percent,
+                            quantize_level=64,
+                            square_size=10,
+                            square_area_shift_size=5) -> list:
         assert hist.shape == (quantize_level, quantize_level)
         assert len(img.shape) == 3
 
         detection_list = []
-        padding = int(square_area_size / 2)
+        padding = int(square_size / 2)
         rows = img.shape[0]
         cols = img.shape[1]
+        hsv_img = cvtColor(img, COLOR_BGR2HSV)
         for y in range(padding, rows - padding, square_area_shift_size):
             for x in range(padding, cols - padding, square_area_shift_size):
-                hsv_pixel = img[y, x]
-                hQ_val = ImageProcessing.quantize(hsv_pixel[0], quantize_level)
-                sQ_val = ImageProcessing.quantize(hsv_pixel[1], quantize_level)
+                hsv_pixel = hsv_img[y, x]
+                h_q_val = ImageProcessing.quantize(hsv_pixel[0], quantize_level, 180)
+                s_q_val = ImageProcessing.quantize(hsv_pixel[1], quantize_level, 255)
                 c = 0
-                for yy in range(y - square_area_size, y + square_area_size):
-                    for xx in range(x - square_area_size, x + square_area_size):
-                        if hist_trustability <= hist[hQ_val, sQ_val]:
+                for yy in range(y - square_size, y + square_size):
+                    for xx in range(x - square_size, x + square_size):
+                        if threshold_hist_percent <= hist[h_q_val, s_q_val]:
                             c += 1
-                areaTrustability = c / (square_area_size ** 2)
-                if square_area_threshold <= areaTrustability:
-                    detection_list.append((x-square_area_size, y-square_area_size, x+square_area_size-1, y+square_area_size-1))
-                    print(str(y) + "," + str(x) + " : value(" + str(areaTrustability) + ")")
+                area_percent = c / (square_size ** 2)
+                if threshold_area_percent <= area_percent:
+                    detection_list.append((x - square_size, y - square_size, x + square_size - 1,
+                                           y + square_size - 1))
+                    Tester.print(str(y) + "," + str(x) + " : value(" + str(area_percent) + ")")
         return detection_list
 
     @staticmethod
-    def drawRect(img: np.ndarray, rect: tuple, r: int, g: int, b: int) -> None:
+    def draw_rect(img: np.ndarray, rect: tuple, r: int, g: int, b: int) -> None:
         assert len(rect) == 4
         rectangle(img, rect[:2], rect[2:], (b, g, r), 2)
 
     @staticmethod
     # ascii 문자만 가능함.
-    def drawText(img: np.ndarray, text: str, position: tuple) -> None:
+    def draw_text(img: np.ndarray, text: str, position: tuple) -> None:
         assert len(position) == 2
         cv2.putText(img, text, position, FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0))
 
@@ -128,5 +173,5 @@ class ImageProcessing:
 #     exp_dir_name = cur_dir + '/experimentalGroup/'
 #     hs_histogram, trustGroupCount = ImageProcessing.multipleHistogramBackProjection(trust_dir_name)
 #     experimentalGroup = os.listdir(exp_dir_name)
-#     print('generate dataset with %d experimentalGroup, %d trustGroup, trustGroup Size is (?,?)'
+#     Tester.print('generate dataset with %d experimentalGroup, %d trustGroup, trustGroup Size is (?,?)'
 #           % (len(experimentalGroup), trustGroupCount))

@@ -27,6 +27,11 @@ class MyWindow(QMainWindow):
         self.btn_prev.resize(100, 100)
         self.btn_prev.clicked.connect(self.ui.click_prev_image)
 
+        self.btn_down_sizing_and_save = QPushButton("32x32로 저장", self)
+        self.btn_down_sizing_and_save.move(630, 100)
+        self.btn_down_sizing_and_save.resize(100, 50)
+        self.btn_down_sizing_and_save.clicked.connect(self.ui.down_sizing_and_save)
+
         self.btn_x = QPushButton("X", self)  # 버튼 정의
         self.btn_x.move(120, 450)
         self.btn_x.clicked.connect(self.ui.click_btn_x)
