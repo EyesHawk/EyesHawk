@@ -9,7 +9,7 @@ import numpy as np
 import cv2 as cv
 from ..module.image_processing import Tester
 
-save_num = 1000
+save_num = 1064
 
 
 class Interaction:
@@ -108,8 +108,9 @@ class Interaction:
             for detect in self.__detection_list__:
                 x_mean += (detect[2] + detect[0]) / 2
                 y_mean += (detect[3] + detect[1]) / 2
-            y_mean /= len(self.__detection_list__)
-            x_mean /= len(self.__detection_list__)
+            if len(self.__detection_list__) != 0:
+                y_mean /= len(self.__detection_list__)
+                x_mean /= len(self.__detection_list__)
 
             shape = self.__current_image__.shape
             start_y = 0
@@ -171,11 +172,16 @@ class Interaction:
             file_path = self.experimental_dir_name + self.__exp_file_list__[order]
             self.__current_image__ = cv.imread(file_path, cv.IMREAD_COLOR)
             # self.__current_image__ = QPixmap(self.experimental_dir_name + self.__exp_file_list__[order])
-            if self.__current_image__.size == 0:
+
+            if self.__current_image__ is None:
+                self.window.label.setText('이미지 로드 실패 - 불러올 수 없는 이미지 :\n' + self.__exp_file_list__[order])
+            elif self.__current_image__.size == 0:
                 self.window.label.setText('이미지 로드 실패 - 불러올 수 없는 이미지 :\n' + self.__exp_file_list__[order])
             else:
+                print(file_path)
+                cv.imshow('origin image', self.__current_image__)
                 shape = list(self.__current_image__.shape)
-                dst_size = 480
+                dst_size = 150
                 if dst_size < shape[0]:
                     shape[1] = int(shape[1] / shape[0] * dst_size)
                     shape[0] = dst_size
