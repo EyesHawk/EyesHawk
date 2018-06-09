@@ -11,6 +11,7 @@ from ..module.image_processing import Tester
 
 save_num = 1000
 
+
 class Interaction:
     def __init__(self, window, quantize_level: int, trust_dir_name: str, experimental_dir_name: str,
                  output_dir_name: str):
@@ -129,6 +130,9 @@ class Interaction:
                     start_x += x_mean - x_range[0] - 1
                     cols += x_mean - x_range[0] - 1
 
+                if start_x < 0:
+                    start_x = 0
+
             else:  # y > x
                 rows = shape[1]
                 cols = shape[1]
@@ -144,16 +148,18 @@ class Interaction:
                 else:
                     start_y += y_mean - y_range[0] - 1
                     rows += y_mean - y_range[0] - 1
+                if start_y < 0:
+                    start_y = 0
 
             sub_image = self.__current_image__[int(start_y):int(rows), int(start_x):int(cols)]
 
             image_32 = cv.resize(sub_image, (32, 32))
             cv.imshow('32', image_32)
-            save_dir = self.output_dir_name+'test32image/'
+            save_dir = self.output_dir_name + 'test32image/'
             if not os.path.exists(save_dir):
                 os.mkdir(save_dir)
-            Tester.print(save_dir+str(save_num)+'.jpg')
-            cv.imwrite(save_dir+str(save_num)+'.jpg', img=image_32)
+            Tester.print(save_dir + str(save_num) + '.jpg')
+            cv.imwrite(save_dir + str(save_num) + '.jpg', img=image_32)
         else:
             print('waring : 현재 이미지 크기가 32를 넘지 않음. ' + str(self.__current_image__.shape))
 
@@ -168,6 +174,15 @@ class Interaction:
             if self.__current_image__.size == 0:
                 self.window.label.setText('이미지 로드 실패 - 불러올 수 없는 이미지 :\n' + self.__exp_file_list__[order])
             else:
+                shape = list(self.__current_image__.shape)
+                dst_size = 480
+                if dst_size < shape[0]:
+                    shape[1] = int(shape[1] / shape[0] * dst_size)
+                    shape[0] = dst_size
+                if dst_size < shape[1]:
+                    shape[0] = int(shape[0] / shape[1] * dst_size)
+                    shape[1] = dst_size
+                self.__current_image__ = cv.resize(self.__current_image__, tuple(shape[0:2]))
                 self.__detection_list__ = ip.detect_from_hs_hist(self.__hist__,
                                                                  self.__current_image__,
                                                                  threshold_hist_percent=0.15,
