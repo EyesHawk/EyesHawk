@@ -136,21 +136,34 @@ class ImageProcessing:
         rows = img.shape[0]
         cols = img.shape[1]
         hsv_img = cvtColor(img, COLOR_BGR2HSV)
-        for y in range(padding, rows - padding, square_area_shift_size):
-            for x in range(padding, cols - padding, square_area_shift_size):
+        arr = [[0, 0] * rows for i in range(cols)]
+        for y in range(rows):
+            for x in range(cols):
                 hsv_pixel = hsv_img[y, x]
                 h_q_val = ImageProcessing.quantize(hsv_pixel[0], quantize_level, 180)
                 s_q_val = ImageProcessing.quantize(hsv_pixel[1], quantize_level, 255)
-                c = 0
-                for yy in range(y - square_size, y + square_size):
-                    for xx in range(x - square_size, x + square_size):
-                        if threshold_hist_percent <= hist[h_q_val, s_q_val]:
-                            c += 1
-                area_percent = c / (square_size ** 2)
+                if threshold_hist_percent <= hist[h_q_val, s_q_val]:
+                    arr[y][x] = 1
+                else:
+                    arr[y][x] = 0
+        for y in range(rows):
+            s = 0
+            for x in range(cols):
+                v = arr[y][x]
+                if y > 0:
+                    arr[y][x] += arr[y - 1][x]
+                arr[y][x] += s
+                s += v
+        for y in range(padding, rows - padding, square_area_shift_size):
+            for x in range(padding, cols - padding, square_area_shift_size):
+                s = arr[y][x] - arr[y - square_area_shift_size - 1][x] - arr[y][x - square_area_shift_size - 1] + \
+                    arr[y - square_area_shift_size - 1][x - square_area_shift_size - 1]
+                area_percent = s / (square_size ** 2)
                 if threshold_area_percent <= area_percent:
                     detection_list.append((x - square_size, y - square_size, x + square_size - 1,
                                            y + square_size - 1))
                     Tester.print(str(y) + "," + str(x) + " : value(" + str(area_percent) + ")")
+
         return detection_list
 
     @staticmethod
