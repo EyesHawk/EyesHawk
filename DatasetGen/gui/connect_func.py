@@ -9,7 +9,7 @@ import numpy as np
 import cv2 as cv
 from ..module.image_processing import Tester
 
-save_num = 0
+save_num = 1000
 
 class Interaction:
     def __init__(self, window, quantize_level: int, trust_dir_name: str, experimental_dir_name: str,

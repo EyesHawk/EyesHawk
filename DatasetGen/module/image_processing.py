@@ -136,7 +136,8 @@ class ImageProcessing:
         rows = img.shape[0]
         cols = img.shape[1]
         hsv_img = cvtColor(img, COLOR_BGR2HSV)
-        arr = [[0, 0] * rows for i in range(cols)]
+        arr = np.array([[0] * cols] * rows, np.int32)
+
         for y in range(rows):
             for x in range(cols):
                 hsv_pixel = hsv_img[y, x]
